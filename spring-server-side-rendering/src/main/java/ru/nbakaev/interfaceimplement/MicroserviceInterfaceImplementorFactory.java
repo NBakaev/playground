@@ -29,10 +29,7 @@ public class MicroserviceInterfaceImplementorFactory {
             List<Class<?>> classes = new ArrayList<>();
             classes.add(aClass);
 
-            Class[] interfaces = new Class[classes.size()];
-            interfaces[0] = classes.get(0);
-
-            Object o = Enhancer.create(UserMicroserviceRequestSuperService.class, interfaces, new MethodInterceptor() {
+            Object o = Enhancer.create(UserMicroserviceRequestSuperService.class, classes.toArray( new Class[classes.size()]), new MethodInterceptor() {
                 @Override
                 public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
 
