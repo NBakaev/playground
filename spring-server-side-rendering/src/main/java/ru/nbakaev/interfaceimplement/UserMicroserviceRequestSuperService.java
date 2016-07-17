@@ -5,7 +5,7 @@
 package ru.nbakaev.interfaceimplement;
 
 /**
- * Object that extends microservice clients interfaces
+ * Superclass for microservice clients interfaces
  *
  * @author Nikita Bakaev, ya@nbakaev.ru
  *         Date: 7/15/2016

@@ -4,13 +4,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import ru.nbakaev.interfaceimplement.annotation.EnableMicroserviceCommunicator;
 
 @SpringBootApplication
 @ComponentScan(value = "ru.nbakaev")
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-public class DemoApplication {
+@EnableMicroserviceCommunicator(basePackages = "ru.nbakaev")
+public class StartApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(DemoApplication.class, args);
+		SpringApplication.run(StartApplication.class, args);
 	}
 }

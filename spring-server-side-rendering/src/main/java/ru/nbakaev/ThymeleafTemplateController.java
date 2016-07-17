@@ -14,7 +14,7 @@ import java.util.List;
  * All Rights Reserved
  */
 @Controller
-public class GreetingController {
+public class ThymeleafTemplateController {
 
     @RequestMapping("/greeting")
     public String greeting(@RequestParam(value="name", required=false, defaultValue="World") String name, Model model) {

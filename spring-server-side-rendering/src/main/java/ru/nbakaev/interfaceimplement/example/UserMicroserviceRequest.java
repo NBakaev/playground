@@ -1,6 +1,6 @@
 package ru.nbakaev.interfaceimplement.example;
 
-import ru.nbakaev.interfaceimplement.MicroserviceRequest;
+import ru.nbakaev.interfaceimplement.annotation.MicroserviceRequest;
 
 import java.util.List;
 
