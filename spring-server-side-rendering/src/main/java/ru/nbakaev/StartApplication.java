@@ -9,7 +9,7 @@ import ru.nbakaev.interfaceimplement.annotation.EnableMicroserviceCommunicator;
 @SpringBootApplication
 @ComponentScan(value = "ru.nbakaev")
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-@EnableMicroserviceCommunicator(basePackages = "ru.nbakaev")
+@EnableMicroserviceCommunicator
 public class StartApplication {
 
 	public static void main(String[] args) {

@@ -12,10 +12,14 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import ru.nbakaev.interfaceimplement.annotation.EnableMicroserviceCommunicator;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -24,24 +28,22 @@ import java.util.Set;
  *         All Rights Reserved
  */
 @Component
-public class MicroserviceInterfaceImplementorBeanDefinition implements BeanDefinitionRegistryPostProcessor{
+public class MicroserviceInterfaceImplementorBeanDefinition implements BeanDefinitionRegistryPostProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(MicroserviceInterfaceImplementorBeanDefinition.class);
 
-    protected void scanPackage(String basePackage, BeanDefinitionRegistry beanDefinitionRegistry){
-
+    private void scanPackage(String basePackage, BeanDefinitionRegistry beanDefinitionRegistry) {
         ClassPathScanningCandidateComponentMicroserviceInterfaceProvider provider = new ClassPathScanningCandidateComponentMicroserviceInterfaceProvider();
         Set<BeanDefinition> components = provider.findCandidateComponents(basePackage);
         for (BeanDefinition component : components) {
             String interfaceClassName = component.getBeanClassName();
             try {
-                Class<?> aClass = Class.forName(interfaceClassName);
-                Object o = MicroserviceInterfaceImplementorFactory.create(aClass);
+                Object beanSignature = MicroserviceInterfaceImplementorFactory.create(Class.forName(interfaceClassName));
 
-                String beanName = o.getClass().getName();
+                String beanName = beanSignature.getClass().getName();
                 GenericBeanDefinition definition = new GenericBeanDefinition();
                 definition.setScope("singleton");
-                definition.setBeanClass(o.getClass());
+                definition.setBeanClass(beanSignature.getClass());
 
                 beanDefinitionRegistry.registerBeanDefinition(beanName, definition);
                 logger.info("Find microservice interface {}", interfaceClassName);
@@ -52,43 +54,82 @@ public class MicroserviceInterfaceImplementorBeanDefinition implements BeanDefin
 
     }
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
-        boolean findRequireAnnotation = false;
-        boolean resolveBasePackage = false;
+    private String[] tryToExtractComponentScanAnnotationFromConfigurationClasses(List<Class> classes) {
+        for (Class aClass : classes) {
+            Annotation annotation = AnnotationUtils.getAnnotation(aClass, ComponentScan.class);
 
-        for (String beanDefinitionName : beanDefinitionRegistry.getBeanDefinitionNames()) {
+            String[] basePackage = (String[]) AnnotationUtils.getValue(annotation, "basePackage");
+            if (basePackage != null && basePackage.length > 0) {
+                return basePackage;
+            }
+
+            basePackage = (String[]) AnnotationUtils.getValue(annotation, "value");
+            if (basePackage != null && basePackage.length > 0) {
+                return basePackage;
+            }
+
+        }
+        return null;
+    }
+
+    private List<Class> getSpringConfigurationClassesByBeanNames(String[] strings, BeanDefinitionRegistry beanDefinitionRegistry) {
+        List<Class> classes = new ArrayList<>();
+
+        for (String beanDefinitionName : strings) {
             BeanDefinition beanDefinition = beanDefinitionRegistry.getBeanDefinition(beanDefinitionName);
 
-            // this is a @Configuration bean
-            if ("full".equals(beanDefinition.getAttribute("org.springframework.context.annotation.ConfigurationClassPostProcessor.configurationClass"))){
+            // this is a signature @Configuration bean
+            if ("full".equals(beanDefinition.getAttribute("org.springframework.context.annotation.ConfigurationClassPostProcessor.configurationClass"))) {
                 logger.debug("Find configuration file {}", beanDefinitionName);
                 try {
                     Class aClass = Class.forName(beanDefinition.getBeanClassName());
-                    Annotation declaredAnnotation = aClass.getDeclaredAnnotation(EnableMicroserviceCommunicator.class);
-                    if (declaredAnnotation != null && declaredAnnotation instanceof EnableMicroserviceCommunicator){
-                        findRequireAnnotation = true;
-                        String[] basePackages = ((EnableMicroserviceCommunicator) declaredAnnotation).basePackages();
-
-                        if (basePackages.length > 0){
-                            for (String basePackage : basePackages){
-                                resolveBasePackage = true;
-                                scanPackage(basePackage, beanDefinitionRegistry);
-                            }
-                        }else{
-                            logger.warn("Found @EnableMicroserviceCommunicator but not found basePackage attribute");
-                        }
-                    }else{
-                        // we have not EnableMicroserviceCommunicator annotation
-                    }
-
-                } catch (ClassNotFoundException e) {
+                    classes.add(aClass);
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
+        return classes;
+    }
 
-        if (!findRequireAnnotation){
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
+        boolean findRequireAnnotation = false;
+        boolean resolveBasePackage = false;
+        List<Class> configurationClasses = getSpringConfigurationClassesByBeanNames(beanDefinitionRegistry.getBeanDefinitionNames(), beanDefinitionRegistry);
+
+        for (Class aClass : configurationClasses) {
+            Annotation declaredAnnotation = aClass.getDeclaredAnnotation(EnableMicroserviceCommunicator.class);
+            if (declaredAnnotation != null && declaredAnnotation instanceof EnableMicroserviceCommunicator) {
+                findRequireAnnotation = true;
+                String[] basePackages = ((EnableMicroserviceCommunicator) declaredAnnotation).basePackages();
+
+                if (basePackages != null && basePackages.length > 0) {
+                    if (basePackages.length >= 1 && !basePackages[0].equals("")) {
+                        for (String basePackage : basePackages) {
+                            resolveBasePackage = true;
+                            scanPackage(basePackage, beanDefinitionRegistry);
+                        }
+                    }
+                } else {
+                    logger.warn("Found @EnableMicroserviceCommunicator but not found basePackage attribute");
+                }
+            } else {
+                // we have not EnableMicroserviceCommunicator annotation
+            }
+        }
+
+        // if not found annotation attribute with @EnableMicroserviceCommunicator - try to find and use @ComponentScan annotation
+        if (!resolveBasePackage) {
+            String[] strings = tryToExtractComponentScanAnnotationFromConfigurationClasses(configurationClasses);
+            if (strings != null) {
+                for (String basePackage : strings) {
+                    scanPackage(basePackage, beanDefinitionRegistry);
+                }
+            }
+        }
+
+        if (!findRequireAnnotation) {
             logger.info("Not find @EnableMicroserviceCommunicator annotation on configuration class. Skipping scanning interfaces");
         }
 

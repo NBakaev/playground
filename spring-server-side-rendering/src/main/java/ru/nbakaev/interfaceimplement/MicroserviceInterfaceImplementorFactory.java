@@ -23,33 +23,32 @@ public class MicroserviceInterfaceImplementorFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(MicroserviceInterfaceImplementorFactory.class);
 
-    public static Object create(Class<?> aClass) {
+    public static Object create(Class<?> interfaceToExtend) {
+        if (interfaceToExtend.isInterface()) {
+            List<Class<?>> extendInterfaces = new ArrayList<>();
+            extendInterfaces.add(interfaceToExtend);
 
-        if (aClass.isInterface()) {
-            List<Class<?>> classes = new ArrayList<>();
-            classes.add(aClass);
-
-            Object o = Enhancer.create(UserMicroserviceRequestSuperService.class, classes.toArray( new Class[classes.size()]), new MethodInterceptor() {
+            Object extendedInterface = Enhancer.create(UserMicroserviceRequestSuperService.class, extendInterfaces.toArray( new Class[extendInterfaces.size()]), new MethodInterceptor() {
                 @Override
                 public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
 
+                    // do not proxy toString and hashCode - invoke super class methods
                     if (method.getName().equals("toString") || method.getName().equals("hashCode")) {
                         return methodProxy.invokeSuper(o, objects);
                     }
-                    logger.debug("Start method {} in {}", method.getName(), o.toString());
+                    logger.debug("Start microservice method {} in {}", method.getName(), o.toString());
 
                     List<String> result = new ArrayList<>();
                     result.add("Ivan");
                     result.add("Petr");
 
-                    logger.debug("End method {} in {}", method.getName(), o.toString());
+                    logger.debug("End microservice method {} in {}", method.getName(), o.toString());
                     return result;
                 }
             });
-            return o;
+            return extendedInterface;
         }
         return null;
-
     }
 
     public MicroserviceInterfaceImplementorFactory() {
