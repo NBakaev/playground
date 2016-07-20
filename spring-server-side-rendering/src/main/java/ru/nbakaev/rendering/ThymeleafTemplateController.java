@@ -1,4 +1,4 @@
-package ru.nbakaev;
+package ru.nbakaev.rendering;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -10,6 +10,7 @@ import java.util.List;
 
 /**
  * This is a demo of usage server-side rendering with thymeleaf template
+ *
  * Created by Nikita Bakaev, ya@nbakaev.ru on 4/6/2016.
  * All Rights Reserved
  */
